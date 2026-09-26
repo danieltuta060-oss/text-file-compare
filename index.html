@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TextDiff Pro</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --card: rgba(18, 31, 53, 0.78);
+      --card-2: rgba(27, 47, 77, 0.72);
+      --text: #eef5ff;
+      --muted: #aab8d0;
+      --blue: #5796ff;
+      --purple: #a875ff;
+      --green: #5ee6b1;
+      --red: #ff7794;
+      --border: rgba(180, 204, 255, 0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(87, 150, 255, .22), transparent 29rem),
+        radial-gradient(circle at 84% 25%, rgba(168, 117, 255, .18), transparent 31rem),
+        radial-gradient(circle at 50% 100%, rgba(94, 230, 177, .1), transparent 29rem),
+        var(--bg);
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: auto;
+      padding: 28px 18px 50px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: center;
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(25, 45, 76, .86), rgba(17, 28, 49, .62));
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 70px rgba(0, 0, 0, .25);
+      animation: appear .6s ease;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 48px);
+      letter-spacing: -1.5px;
+    }
+
+    h1 span {
+      background: linear-gradient(90deg, var(--blue), var(--purple), var(--green));
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .hero p {
+      color: var(--muted);
+      margin: 10px 0 0;
+      max-width: 650px;
+      line-height: 1.5;
+    }
+
+    .badge {
+      white-space: nowrap;
+      padding: 10px 14px;
+      border: 1px solid rgba(94, 230, 177, .35);
+      border-radius: 99px;
+      color: var(--green);
+      background: rgba(94, 230, 177, .08);
+      font-size: 14px;
+    }
+
+    .panel {
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--card);
+      backdrop-filter: blur(14px);
+    }
+
+    .dropzone {
+      display: grid;
+      place-items: center;
+      min-height: 200px;
+      border: 2px dashed rgba(87, 150, 255, .5);
+      border-radius: 16px;
+      text-align: center;
+      padding: 26px;
+      cursor: pointer;
+      transition: .25s ease;
+      background: rgba(87, 150, 255, .05);
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: var(--green);
+      transform: translateY(-2px);
+      background: rgba(94, 230, 177, .08);
+      box-shadow: 0 10px 40px rgba(94, 230, 177, .08);
+    }
+
+    .dropzone strong {
+      display: block;
+      font-size: 19px;
+      margin-bottom: 8px;
+    }
+
+    .dropzone small { color: var(--muted); }
+
+    input[type="file"] { display: none; }
+
+    .file-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card-2);
+      animation: appear .3s ease;
+    }
+
+    .file-item .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-item small { color: var(--muted); }
+
+    .remove-file {
+      border: 0;
+      padding: 7px 10px;
+      border-radius: 8px;
+      color: #ffd5dd;
+      background: rgba(255, 119, 148, .14);
+      cursor: pointer;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .option {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .03);
+      color: var(--muted);
+    }
+
+    .option label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    select {
+      width: 100%;
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      padding: 9px;
+      color: var(--text);
+      border-radius: 8px;
+      background: #14233b;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    button {
+      border: 0;
+      padding: 13px 18px;
+      border-radius: 12px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      transition: transform .2s ease, filter .2s ease;
+    }
+
+    button:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+    .primary {
+      background: linear-gradient(100deg, var(--blue), var(--purple));
+      box-shadow: 0 10px 30px rgba(87, 150, 255, .22);
+    }
+
+    .secondary {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, .06);
+    }
+
+    .danger {
+      background: rgba(255, 119, 148, .16);
+      color: #ffc0cc;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--card);
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 27px;
+    }
+
+    .stat small { color: var(--muted); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin: 22px 0 14px;
+    }
+
+    .search {
+      flex: 1;
+      min-width: 220px;
+      padding: 12px;
+      color: var(--text);
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab {
+      padding: 9px 12px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid var(--border);
+    }
+
+    .tab.active {
+      color: white;
+      border-color: rgba(87, 150, 255, .65);
+      background: rgba(87, 150, 255, .18);
+    }
+
+    .results {
+      display: grid;
+      gap: 12px;
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      animation: appear .25s ease;
+    }
+
+    .line {
+      overflow-wrap: anywhere;
+      font-family: Consolas, monospace;
+      font-size: 14px;
+    }
+
+    .tag {
+      padding: 6px 9px;
+      border-radius: 99px;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+
+    .unique { color: #bcefdc; background: rgba(94, 230, 177, .12); }
+    .common { color: #c9dcff; background: rgba(87, 150, 255, .12); }
+    .duplicate { color: #ead0ff; background: rgba(168, 117, 255, .15); }
+
+    .empty {
+      padding: 36px;
+      color: var(--muted);
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+    }
+
+    .hidden { display: none; }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .hero { padding: 22px; align-items: flex-start; flex-direction: column; }
+      .result-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <header class="hero">
+      <div>
+        <h1><span>TextDiff</span> Pro</h1>
+        <p>
+          Încarcă două sau mai multe fișiere TXT, găsește liniile identice,
+          duplicatele și liniile care apar într-un singur fișier.
+        </p>
+      </div>
+      <div class="badge">Procesare locală</div>
+    </header>
+
+    <section class="panel">
+      <label class="dropzone" id="dropzone" for="fileInput">
+        <div>
+          <strong>Trage fișierele TXT aici</strong>
+          <small>sau apasă pentru a alege două sau mai multe fișiere</small>
+        </div>
+      </label>
+
+      <input id="fileInput" type="file" accept=".txt,text/plain" multiple />
+      <div class="file-list" id="fileList"></div>
+
+      <div class="options">
+        <div class="option">
+          <label>
+            <input id="ignoreCase" type="checkbox" />
+            Ignoră diferențele între litere mari/mici
+          </label>
+        </div>
+
+        <div class="option">
+          <label>
+            <input id="trimSpaces" type="checkbox" checked />
+            Elimină spațiile de la început și final
+          </label>
+        </div>
+
+        <div class="option">
+          <label>
+            Sortare rezultate
+            <select id="sortOrder">
+              <option value="original">Ordine originală</option>
+              <option value="az">A → Z</option>
+              <option value="za">Z → A</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="compareBtn">Compară fișierele</button>
+        <button class="secondary" id="downloadBtn">Descarcă rezultatul</button>
+        <button class="danger" id="clearBtn">Șterge tot</button>
+      </div>
+    </section>
+
+    <section class="stats hidden" id="stats">
+      <div class="stat"><small>Fișiere încărcate</small><strong id="statFiles">0</strong></div>
+      <div class="stat"><small>Linii totale</small><strong id="statTotal">0</strong></div>
+      <div class="stat"><small>Linii unice</small><strong id="statUnique">0</strong></div>
+      <div class="stat"><small>Linii comune</small><strong id="statCommon">0</strong></div>
+      <div class="stat"><small>Duplicate</small><strong id="statDuplicates">0</strong></div>
+    </section>
+
+    <section class="panel hidden" id="resultPanel">
+      <div class="toolbar">
+        <input class="search" id="searchInput" placeholder="Caută în rezultate..." />
+        <div class="tabs">
+          <button class="tab active" data-filter="all">Toate</button>
+          <button class="tab" data-filter="unique">Doar unice</button>
+          <button class="tab" data-filter="common">Comune</button>
+          <button class="tab" data-filter="duplicate">Duplicate</button>
+        </div>
+      </div>
+
+      <div class="results" id="results"></div>
+    </section>
+  </main>
+
+  <script>
+    let files = [];
+    let analyzedLines = [];
+    let activeFilter = "all";
+
+    const fileInput = document.getElementById("fileInput");
+    const dropzone = document.getElementById("dropzone");
+    const fileList = document.getElementById("fileList");
+    const results = document.getElementById("results");
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function updateFileList() {
+      fileList.innerHTML = "";
+
+      files.forEach((file, index) => {
+        const item = document.createElement("div");
+        item.className = "file-item";
+
+        item.innerHTML = `
+          <div>
+            <div class="name">📄 ${file.name}</div>
+            <small>${formatSize(file.size)}</small>
+          </div>
+          <button class="remove-file" data-index="${index}">Șterge</button>
+        `;
+
+        fileList.appendChild(item);
+      });
+
+      document.querySelectorAll(".remove-file").forEach(button => {
+        button.addEventListener("click", () => {
+          files.splice(Number(button.dataset.index), 1);
+          updateFileList();
+        });
+      });
+    }
+
+    function addFiles(newFiles) {
+      const accepted = [...newFiles].filter(file =>
+        file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")
+      );
+
+      accepted.forEach(file => {
+        const exists = files.some(existing =>
+          existing.name === file.name && existing.size === file.size
+        );
+
+        if (!exists) files.push(file);
+      });
+
+      updateFileList();
+    }
+
+    fileInput.addEventListener("change", event => addFiles(event.target.files));
+
+    ["dragenter", "dragover"].forEach(eventName => {
+      dropzone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+      dropzone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropzone.classList.remove("dragover");
+      });
+    });
+
+    dropzone.addEventListener("drop", event => addFiles(event.dataTransfer.files));
+
+    function normalize(line) {
+      const trimSpaces = document.getElementById("trimSpaces").checked;
+      const ignoreCase = document.getElementById("ignoreCase").checked;
+
+      let value = trimSpaces ? line.trim() : line;
+      return ignoreCase ? value.toLowerCase() : value;
+    }
+
+    function sortLines(lines) {
+      const order = document.getElementById("sortOrder").value;
+
+      if (order === "az") {
+        return [...lines].sort((a, b) => a.display.localeCompare(b.display, "ro"));
+      }
+
+      if (order === "za") {
+        return [...lines].sort((a, b) => b.display.localeCompare(a.display, "ro"));
+      }
+
+      return lines;
+    }
+
+    async function compareFiles() {
+      if (files.length < 2) {
+        alert("Adaugă minimum două fișiere TXT.");
+        return;
+      }
+
+      const fileContents = await Promise.all(files.map(file => file.text()));
+      const entries = new Map();
+      let totalLines = 0;
+
+      fileContents.forEach((text, fileIndex) => {
+        const lines = text.split(/\r?\n/);
+
+        lines.forEach(line => {
+          const key = normalize(line);
+          if (!key) return;
+
+          totalLines++;
+
+          if (!entries.has(key)) {
+            entries.set(key, {
+              display: line.trim(),
+              occurrences: 0,
+              files: new Set(),
+              index: entries.size
+            });
+          }
+
+          const entry = entries.get(key);
+          entry.occurrences++;
+          entry.files.add(fileIndex);
+        });
+      });
+
+      analyzedLines = [...entries.values()].map(entry => {
+        let type = "unique";
+
+        if (entry.occurrences > entry.files.size) {
+          type = "duplicate";
+        } else if (entry.files.size > 1) {
+          type = "common";
+        }
+
+        return { ...entry, type };
+      });
+
+      const commonCount = analyzedLines.filter(x => x.files.size > 1).length;
+      const duplicateCount = analyzedLines.filter(x => x.occurrences > x.files.size).length;
+
+      document.getElementById("statFiles").textContent = files.length;
+      document.getElementById("statTotal").textContent = totalLines;
+      document.getElementById("statUnique").textContent = analyzedLines.length;
+      document.getElementById("statCommon").textContent = commonCount;
+      document.getElementById("statDuplicates").textContent = duplicateCount;
+
+      document.getElementById("stats").classList.remove("hidden");
+      document.getElementById("resultPanel").classList.remove("hidden");
+
+      renderResults();
+    }
+
+    function getFilteredLines() {
+      const search = document.getElementById("searchInput").value.toLowerCase();
+
+      return sortLines(analyzedLines.filter(item => {
+        const filterMatch = activeFilter === "all" || item.type === activeFilter;
+        const searchMatch = item.display.toLowerCase().includes(search);
+        return filterMatch && searchMatch;
+      }));
+    }
+
+    function renderResults() {
+      const lines = getFilteredLines();
+      results.innerHTML = "";
+
+      if (!lines.length) {
+        results.innerHTML = `<div class="empty">Nu există rezultate pentru filtrul ales.</div>`;
+        return;
+      }
+
+      lines.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "result-row";
+
+        const typeText = {
+          unique: "Unică",
+          common: "Comună",
+          duplicate: "Duplicat"
+        }[item.type];
+
+        const fileNames = [...item.files]
+          .map(index => files[index].name)
+          .join(", ");
+
+        row.innerHTML = `
+          <div>
+            <div class="line">${escapeHtml(item.display)}</div>
+            <small style="color:#aab8d0">
+              Apare de ${item.occurrences} ori · Fișiere: ${escapeHtml(fileNames)}
+            </small>
+          </div>
+          <span class="tag ${item.type}">${typeText}</span>
+        `;
+
+        results.appendChild(row);
+      });
+    }
+
+    function escapeHtml(value) {
+      const div = document.createElement("div");
+      div.textContent = value;
+      return div.innerHTML;
+    }
+
+    function downloadResult() {
+      if (!analyzedLines.length) {
+        alert("Compară fișierele înainte de descărcare.");
+        return;
+      }
+
+      const data = getFilteredLines()
+        .map(item => {
+          const fileNames = [...item.files].map(index => files[index].name).join(", ");
+          return `[${item.type.toUpperCase()}] ${item.display} | Apariții: ${item.occurrences} | Fișiere: ${fileNames}`;
+        })
+        .join("\n");
+
+      const blob = new Blob([data], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "rezultat-textdiff.txt";
+      link.click();
+
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("compareBtn").addEventListener("click", compareFiles);
+    document.getElementById("downloadBtn").addEventListener("click", downloadResult);
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      files = [];
+      analyzedLines = [];
+      fileInput.value = "";
+      fileList.innerHTML = "";
+      results.innerHTML = "";
+      document.getElementById("stats").classList.add("hidden");
+      document.getElementById("resultPanel").classList.add("hidden");
+    });
+
+    document.getElementById("searchInput").addEventListener("input", renderResults);
+
+    document.querySelectorAll(".tab").forEach(button => {
+      button.addEventListener("click", () => {
+        activeFilter = button.dataset.filter;
+
+        document.querySelectorAll(".tab").forEach(tab =>
+          tab.classList.remove("active")
+        );
+
+        button.classList.add("active");
+        renderResults();
+      });
+    });
+  </script>
+</body>
+</html>
