@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TextDiff Pro — Smart Text Comparator</title>
+  <style>
+    :root {
+      --bg: #070b16;
+      --panel: rgba(15, 23, 42, .76);
+      --panel-solid: #10192c;
+      --line: rgba(148, 163, 184, .15);
+      --text: #edf4ff;
+      --muted: #8fa2c2;
+      --primary: #7c5cff;
+      --secondary: #00d6bd;
+      --danger: #ff5575;
+      --warning: #ffb454;
+      --success: #22d39b;
+      --shadow: 0 20px 60px rgba(0, 0, 0, .28);
+    }
+
+    body.light {
+      --bg: #f3f6fc;
+      --panel: rgba(255, 255, 255, .82);
+      --panel-solid: #ffffff;
+      --line: rgba(30, 41, 59, .12);
+      --text: #172033;
+      --muted: #64748b;
+      --shadow: 0 20px 60px rgba(46, 61, 91, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(124, 92, 255, .22), transparent 34%),
+        radial-gradient(circle at 90% 10%, rgba(0, 214, 189, .16), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: .25s ease;
+    }
+
+    button, input, select { font: inherit; }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      color: inherit;
+    }
+
+    .app {
+      width: min(1600px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 20px 0 36px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      display: grid;
+      place-items: center;
+      width: 45px;
+      height: 45px;
+      color: white;
+      font-weight: 900;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      box-shadow: 0 12px 25px rgba(124, 92, 255, .34);
+    }
+
+    h1 {
+      font-size: 1.15rem;
+      margin: 0;
+      letter-spacing: -.03em;
+    }
+
+    .subtitle {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+
+    .top-actions, .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 10px 13px;
+      background: var(--panel);
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(124, 92, 255, .65);
+    }
+
+    .btn.primary {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--primary), #5c42df);
+      color: white;
+      font-weight: 750;
+    }
+
+    .btn.success {
+      background: linear-gradient(135deg, #00b990, #14d7ab);
+      border-color: transparent;
+      color: #052019;
+      font-weight: 800;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 290px minmax(0, 1fr) 265px;
+      gap: 16px;
+    }
+
+    .panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .sidebar, .rightbar {
+      padding: 15px;
+      height: fit-content;
+      position: sticky;
+      top: 16px;
+    }
+
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: .86rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .count {
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 700;
+    }
+
+    .dropzone {
+      border: 1px dashed rgba(124, 92, 255, .7);
+      background: rgba(124, 92, 255, .08);
+      border-radius: 13px;
+      padding: 18px 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: .82rem;
+      transition: .2s ease;
+      margin-bottom: 10px;
+    }
+
+    .dropzone.dragging {
+      background: rgba(0, 214, 189, .13);
+      border-color: var(--secondary);
+      transform: scale(1.015);
+    }
+
+    .dropzone strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    #fileInput { display: none; }
+
+    .files {
+      display: grid;
+      gap: 8px;
+      max-height: 490px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .file-card {
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: rgba(148, 163, 184, .04);
+      border-radius: 12px;
+    }
+
+    .file-card.active {
+      border-color: rgba(124, 92, 255, .75);
+      background: rgba(124, 92, 255, .11);
+    }
+
+    .file-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .file-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 176px;
+      font-size: .8rem;
+      font-weight: 750;
+    }
+
+    .file-meta {
+      color: var(--muted);
+      font-size: .7rem;
+      margin-top: 4px;
+    }
+
+    .icon-btn {
+      width: 27px;
+      height: 27px;
+      border-radius: 8px;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 85, 117, .12);
+      color: var(--danger);
+    }
+
+    .baseline-label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: .7rem;
+    }
+
+    .baseline-label input { accent-color: var(--primary); }
+
+    .main {
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hero-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 15px;
+    }
+
+    .hero h2 {
+      margin: 0;
+      letter-spacing: -.035em;
+      font-size: 1.32rem;
+    }
+
+    .hero p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: .84rem;
+      line-height: 1.5;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stat {
+      padding: 12px;
+      border-radius: 13px;
+      border: 1px solid var(--line);
+      background: rgba(148, 163, 184, .04);
+    }
+
+    .stat-value {
+      font-weight: 900;
+      letter-spacing: -.04em;
+      font-size: 1.25rem;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: .69rem;
+      margin-top: 4px;
+    }
+
+    .toolbar {
+      padding: 15px 20px;
+      display: grid;
+      grid-template-columns: minmax(170px, 1fr) auto auto;
+      gap: 9px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .field, .select {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      background: rgba(148, 163, 184, .06);
+      outline: none;
+      padding: 10px 11px;
+      min-width: 0;
+    }
+
+    .field:focus, .select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124, 92, 255, .14);
+    }
+
+    .select option {
+      color: #111827;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 7px;
+      overflow: auto;
+      padding: 13px 20px 0;
+    }
+
+    .tab {
+      border: 1px solid transparent;
+      color: var(--muted);
+      background: transparent;
+      padding: 8px 10px;
+      border-radius: 10px 10px 0 0;
+      white-space: nowrap;
+      font-size: .77rem;
+      font-weight: 750;
+    }
+
+    .tab.active {
+      border-color: var(--line);
+      border-bottom-color: var(--panel-solid);
+      background: var(--panel-solid);
+      color: var(--text);
+    }
+
+    .results {
+      min-height: 510px;
+      max-height: 650px;
+      overflow: auto;
+      padding: 12px 20px 20px;
+      background: var(--panel-solid);
+    }
+
+    .empty {
+      min-height: 380px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 30px;
+    }
+
+    .empty-icon {
+      margin: 0 auto 12px;
+      display: grid;
+      place-items: center;
+      width: 62px;
+      height: 62px;
+      font-size: 1.8rem;
+      border-radius: 19px;
+      background: rgba(124, 92, 255, .1);
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      animation: show .22s ease both;
+    }
+
+    @keyframes show {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-row:hover {
+      background: rgba(124, 92, 255, .055);
+    }
+
+    .line-number {
+      color: var(--muted);
+      font-size: .72rem;
+      text-align: right;
+    }
+
+    .line-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font: .78rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .badges {
+      display: flex;
+      justify-content: flex-end;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 4px 7px;
+      font-size: .64rem;
+      font-weight: 850;
+      border-radius: 999px;
+      letter-spacing: .02em;
+    }
+
+    .badge.unique { color: #63e6be; background: rgba(34, 211, 155, .12); }
+    .badge.common { color: #8fc5ff; background: rgba(96, 165, 250, .14); }
+    .badge.duplicate { color: #ffc079; background: rgba(255, 180, 84, .14); }
+    .badge.count { color: #c6b9ff; background: rgba(124, 92, 255, .14); }
+
+    .filter-group {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .filter-group:last-child { border-bottom: 0; }
+
+    .filter-label {
+      color: var(--muted);
+      display: block;
+      margin-bottom: 8px;
+      font-size: .72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .check {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--text);
+      font-size: .79rem;
+      margin: 8px 0;
+      cursor: pointer;
+    }
+
+    .check input { accent-color: var(--primary); }
+
+    .info-box {
+      margin-top: 12px;
+      border-radius: 12px;
+      padding: 10px;
+      color: var(--muted);
+      background: rgba(0, 214, 189, .07);
+      font-size: .72rem;
+      line-height: 1.5;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translate(-50%, 30px);
+      opacity: 0;
+      z-index: 5;
+      padding: 11px 15px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      background: #15213a;
+      box-shadow: var(--shadow);
+      font-size: .8rem;
+      pointer-events: none;
+      transition: .25s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    mark {
+      color: inherit;
+      background: rgba(255, 180, 84, .55);
+      border-radius: 3px;
+      padding: 0 1px;
+    }
+
+    @media (max-width: 1150px) {
+      .layout { grid-template-columns: 255px minmax(0, 1fr); }
+      .rightbar { grid-column: 1 / -1; position: static; }
+      .rightbar .filter-group { display: inline-block; vertical-align: top; width: 31%; margin-right: 2%; border-bottom: 0; }
+    }
+
+    @media (max-width: 780px) {
+      .app { width: min(100% - 18px, 1600px); padding-top: 10px; }
+      .topbar, .hero-row { align-items: flex-start; flex-direction: column; }
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .toolbar .field { grid-column: 1 / -1; }
+      .rightbar .filter-group { display: block; width: auto; margin: 0; border-bottom: 1px solid var(--line); }
+      .result-row { grid-template-columns: 28px minmax(0, 1fr); }
+      .badges { grid-column: 2; justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">TD</div>
+        <div>
+          <h1>TextDiff Pro</h1>
+          <p class="subtitle">Smart multi-file comparison workspace</p>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn" id="themeBtn">☀️ Light mode</button>
+        <button class="btn" id="clearBtn">Clear session</button>
+        <button class="btn success" id="exportBtn">Export result</button>
+      </div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel sidebar">
+        <div class="panel-title">
+          <span>Files</span>
+          <span class="count" id="fileCount">0 files</span>
+        </div>
+
+        <label class="dropzone" id="dropzone" for="fileInput">
+          <strong>Drop files here</strong>
+          TXT, CSV, LOG, JSON · or click to browse
+        </label>
+        <input id="fileInput" type="file" multiple accept=".txt,.csv,.log,.json,text/plain,text/csv,application/json" />
+
+        <div class="row-actions" style="margin-bottom:10px">
+          <button class="btn" id="selectFilesBtn">+ Add files</button>
+          <button class="btn primary" id="analyzeBtn">Analyze</button>
+        </div>
+
+        <div class="files" id="filesList"></div>
+      </aside>
+
+      <section class="panel main">
+        <div class="hero">
+          <div class="hero-row">
+            <div>
+              <h2>Comparison Dashboard</h2>
+              <p id="statusText">Add at least two files, then run the analysis.</p>
+            </div>
+            <button class="btn primary" id="copyBtn">Copy visible</button>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="stat-value" id="statFiles">0</div><div class="stat-label">FILES</div></div>
+          <div class="stat"><div class="stat-value" id="statLines">0</div><div class="stat-label">TOTAL LINES</div></div>
+          <div class="stat"><div class="stat-value" id="statUnique">0</div><div class="stat-label">UNIQUE</div></div>
+          <div class="stat"><div class="stat-value" id="statCommon">0</div><div class="stat-label">COMMON</div></div>
+          <div class="stat"><div class="stat-value" id="statDuplicates">0</div><div class="stat-label">DUPLICATES</div></div>
+        </div>
+
+        <div class="toolbar">
+          <input class="field" id="searchInput" type="search" placeholder="Search results… (Ctrl + F)" />
+          <select class="select" id="sortSelect">
+            <option value="original">Original order</option>
+            <option value="az">A → Z</option>
+            <option value="za">Z → A</option>
+            <option value="frequency">Most frequent</option>
+          </select>
+          <select class="select" id="exportType">
+            <option value="txt">Export TXT</option>
+            <option value="csv">Export CSV</option>
+            <option value="json">Export JSON</option>
+          </select>
+        </div>
+
+        <nav class="tabs">
+          <button class="tab active" data-tab="all">All <span id="allTabCount">(0)</span></button>
+          <button class="tab" data-tab="unique">Unique <span id="uniqueTabCount">(0)</span></button>
+          <button class="tab" data-tab="common">Common <span id="commonTabCount">(0)</span></button>
+          <button class="tab" data-tab="duplicate">Duplicates <span id="duplicateTabCount">(0)</span></button>
+        </nav>
+
+        <div class="results" id="results">
+          <div class="empty">
+            <div>
+              <div class="empty-icon">⇄</div>
+              <strong>Your comparison results will appear here</strong>
+              <p>Upload text-based files and click <b>Analyze</b>.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel rightbar">
+        <div class="panel-title">Analysis settings</div>
+
+        <div class="filter-group">
+          <span class="filter-label">Normalization</span>
+          <label class="check"><input id="ignoreCase" type="checkbox" checked /> Ignore letter case</label>
+          <label class="check"><input id="trimSpace" type="checkbox" checked /> Trim whitespace</label>
+          <label class="check"><input id="ignoreEmpty" type="checkbox" checked /> Ignore empty lines</label>
+          <label class="check"><input id="ignoreDiacritics" type="checkbox" /> Ignore diacritics</label>
+          <label class="check"><input id="ignorePunctuation" type="checkbox" /> Ignore punctuation</label>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">Display</span>
+          <label class="check"><input id="showSources" type="checkbox" checked /> Show source files</label>
+          <label class="check"><input id="showOccurrences" type="checkbox" checked /> Show occurrences</label>
+          <label class="check"><input id="dedupeVisible" type="checkbox" /> Hide repeated output</label>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">Minimum occurrences</span>
+          <select class="select" id="minOccurrences" style="width:100%">
+            <option value="1">1+ occurrences</option>
+            <option value="2">2+ occurrences</option>
+            <option value="3">3+ occurrences</option>
+          </select>
+        </div>
+
+        <div class="info-box">
+          Analysis takes place directly in the browser. Your selected files remain on your device.
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const state = {
+      files: [],
+      results: [],
+      activeTab: "all",
+      baselineId: null,
+      isLight: false
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const elements = {
+      fileInput: $("fileInput"),
+      dropzone: $("dropzone"),
+      filesList: $("filesList"),
+      fileCount: $("fileCount"),
+      analyzeBtn: $("analyzeBtn"),
+      selectFilesBtn: $("selectFilesBtn"),
+      clearBtn: $("clearBtn"),
+      results: $("results"),
+      statusText: $("statusText"),
+      searchInput: $("searchInput"),
+      sortSelect: $("sortSelect"),
+      exportType: $("exportType"),
+      exportBtn: $("exportBtn"),
+      copyBtn: $("copyBtn"),
+      themeBtn: $("themeBtn"),
+      toast: $("toast"),
+      statFiles: $("statFiles"),
+      statLines: $("statLines"),
+      statUnique: $("statUnique"),
+      statCommon: $("statCommon"),
+      statDuplicates: $("statDuplicates"),
+      allTabCount: $("allTabCount"),
+      uniqueTabCount: $("uniqueTabCount"),
+      commonTabCount: $("commonTabCount"),
+      duplicateTabCount: $("duplicateTabCount"),
+      ignoreCase: $("ignoreCase"),
+      trimSpace: $("trimSpace"),
+      ignoreEmpty: $("ignoreEmpty"),
+      ignoreDiacritics: $("ignoreDiacritics"),
+      ignorePunctuation: $("ignorePunctuation"),
+      showSources: $("showSources"),
+      showOccurrences: $("showOccurrences"),
+      dedupeVisible: $("dedupeVisible"),
+      minOccurrences: $("minOccurrences")
+    };
+
+    function toast(message) {
+      elements.toast.textContent = message;
+      elements.toast.classList.add("show");
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 2600);
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return "0 B";
+      const units = ["B", "KB", "MB", "GB"];
+      const index = Math.floor(Math.log(bytes) / Math.log(1024));
+      return `${(bytes / Math.pow(1024, index)).toFixed(index ? 1 : 0)} ${units[index]}`;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function normalizeLine(line) {
+      let value = line;
+
+      if (elements.trimSpace.checked) value = value.trim();
+      if (elements.ignoreCase.checked) value = value.toLocaleLowerCase();
+      if (elements.ignoreDiacritics.checked) {
+        value = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      }
+      if (elements.ignorePunctuation.checked) {
+        value = value.replace(/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, "");
+      }
+
+      return value;
+    }
+
+    async function addFiles(fileList) {
+      const accepted = [...fileList].filter(file => {
+        const allowed = /\.(txt|csv|log|json)$/i.test(file.name) ||
+          ["text/plain", "text/csv", "application/json"].includes(file.type);
+        return allowed;
+      });
+
+      if (!accepted.length) {
+        toast("Choose TXT, CSV, LOG or JSON files.");
+        return;
+      }
+
+      for (const file of accepted) {
+        const duplicate = state.files.some(item =>
+          item.name === file.name && item.size === file.size && item.lastModified === file.lastModified
+        );
+
+        if (duplicate) continue;
+
+        const content = await file.text();
+        state.files.push({
+          id: crypto.randomUUID(),
+          name: file.name,
+          size: file.size,
+          lastModified: file.lastModified,
+          content
+        });
+      }
+
+      if (!state.baselineId && state.files.length) state.baselineId = state.files[0].id;
+      renderFiles();
+      saveSession();
+      toast(`${accepted.length} file(s) added.`);
+    }
+
+    function renderFiles() {
+      elements.fileCount.textContent = `${state.files.length} file${state.files.length === 1 ? "" : "s"}`;
+
+      if (!state.files.length) {
+        elements.filesList.innerHTML = `<div class="file-meta">No files loaded yet.</div>`;
+        return;
+      }
+
+      elements.filesList.innerHTML = state.files.map(file => `
+        <article class="file-card ${file.id === state.baselineId ? "active" : ""}">
+          <div class="file-head">
+            <div style="min-width:0">
+              <div class="file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+              <div class="file-meta">${formatBytes(file.size)} · ${file.content.split(/\r?\n/).length} lines</div>
+            </div>
+            <button class="icon-btn" title="Remove file" data-remove="${file.id}">✕</button>
+          </div>
+          <label class="baseline-label">
+            <input type="radio" name="baseline" value="${file.id}" ${file.id === state.baselineId ? "checked" : ""} />
+            Use as baseline
+          </label>
+        </article>
+      `).join("");
+
+      document.querySelectorAll("[data-remove]").forEach(button => {
+        button.addEventListener("click", () => removeFile(button.dataset.remove));
+      });
+
+      document.querySelectorAll('input[name="baseline"]').forEach(input => {
+        input.addEventListener("change", () => {
+          state.baselineId = input.value;
+          renderFiles();
+          saveSession();
+        });
+      });
+    }
+
+    function removeFile(id) {
+      state.files = state.files.filter(file => file.id !== id);
+      if (state.baselineId === id) state.baselineId = state.files[0]?.id || null;
+      state.results = [];
+      renderFiles();
+      renderStats();
+      renderResults();
+      saveSession();
+      toast("File removed.");
+    }
+
+    function analyze() {
+      if (state.files.length < 2) {
+        toast("Add at least two files for comparison.");
+        return;
+      }
+
+      const map = new Map();
+      let order = 0;
+
+      for (const file of state.files) {
+        const rawLines = file.content.replace(/^\uFEFF/, "").split(/\r?\n/);
+        const localCounts = new Map();
+
+        rawLines.forEach((raw, lineIndex) => {
+          const normalized = normalizeLine(raw);
+          if (elements.ignoreEmpty.checked && !normalized) return;
+
+          if (!map.has(normalized)) {
+            map.set(normalized, {
+              id: crypto.randomUUID(),
+              original: raw,
+              normalized,
+              sources: new Map(),
+              totalOccurrences: 0,
+              firstOrder: order++
+            });
+          }
+
+          const entry = map.get(normalized);
+          if (!entry.sources.has(file.id)) {
+            entry.sources.set(file.id, {
+              fileName: file.name,
+              count: 0,
+              lines: []
+            });
+          }
+
+          const source = entry.sources.get(file.id);
+          source.count++;
+          source.lines.push(lineIndex + 1);
+          entry.totalOccurrences++;
+          localCounts.set(normalized, (localCounts.get(normalized) || 0) + 1);
+        });
+      }
+
+      state.results = [...map.values()].map(entry => {
+        const filePresence = entry.sources.size;
+        const hasDuplicates = [...entry.sources.values()].some(source => source.count > 1);
+
+        let type = "unique";
+        if (filePresence === state.files.length) type = "common";
+        else if (hasDuplicates || entry.totalOccurrences > 1) type = "duplicate";
+
+        return {
+          ...entry,
+          type,
+          filePresence,
+          hasDuplicates
+        };
+      });
+
+      elements.statusText.textContent =
+        `Analysis complete: ${state.results.length.toLocaleString()} distinct lines found across ${state.files.length} files.`;
+
+      renderStats();
+      renderResults();
+      saveSession();
+      toast("Analysis completed.");
+    }
+
+    function getFilteredResults() {
+      const search = elements.searchInput.value.trim().toLocaleLowerCase();
+      const minOccurrences = Number(elements.minOccurrences.value);
+
+      let rows = state.results.filter(item => {
+        const matchesTab =
+          state.activeTab === "all" ||
+          (state.activeTab === "duplicate" ? item.hasDuplicates || item.type === "duplicate" : item.type === state.activeTab);
+
+        const searchable = `${item.original} ${[...item.sources.values()].map(s => s.fileName).join(" ")}`.toLocaleLowerCase();
+        return matchesTab && item.totalOccurrences >= minOccurrences && (!search || searchable.includes(search));
+      });
+
+      if (elements.dedupeVisible.checked) {
+        const seen = new Set();
+        rows = rows.filter(item => {
+          if (seen.has(item.normalized)) return false;
+          seen.add(item.normalized);
+          return true;
+        });
+      }
+
+      const sorting = elements.sortSelect.value;
+      if (sorting === "az") rows.sort((a, b) => a.original.localeCompare(b.original));
+      if (sorting === "za") rows.sort((a, b) => b.original.localeCompare(a.original));
+      if (sorting === "frequency") rows.sort((a, b) => b.totalOccurrences - a.totalOccurrences || a.original.localeCompare(b.original));
+      if (sorting === "original") rows.sort((a, b) => a.firstOrder - b.firstOrder);
+
+      return rows;
+    }
+
+    function highlight(text) {
+      const search = elements.searchInput.value.trim();
+      const escaped = escapeHtml(text);
+      if (!search) return escaped;
+
+      const safe = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return escaped.replace(new RegExp(`(${safe})`, "ig"), "<mark>$1</mark>");
+    }
+
+    function renderResults() {
+      const rows = getFilteredResults();
+
+      if (!state.results.length) {
+        elements.results.innerHTML = `
+          <div class="empty">
+            <div>
+              <div class="empty-icon">⇄</div>
+              <strong>Your comparison results will appear here</strong>
+              <p>Upload at least two files and run the analysis.</p>
+            </div>
+          </div>`;
+        return;
+      }
+
+      if (!rows.length) {
+        elements.results.innerHTML = `
+          <div class="empty">
+            <div>
+              <div class="empty-icon">⌕</div>
+              <strong>No matching rows</strong>
+              <p>Change the active tab, search phrase, or filters.</p>
+            </div>
+          </div>`;
+        return;
+      }
+
+      elements.results.innerHTML = rows.map((item, index) => {
+        const sourceText = [...item.sources.values()]
+          .map(source => `${source.fileName}${elements.showOccurrences.checked ? ` (${source.count}×)` : ""}`)
+          .join(" · ");
+
+        const typeBadge = item.type === "common"
+          ? `<span class="badge common">COMMON</span>`
+          : item.type === "unique"
+            ? `<span class="badge unique">UNIQUE</span>`
+            : `<span class="badge duplicate">DUPLICATE</span>`;
+
+        return `
+          <div class="result-row">
+            <div class="line-number">${index + 1}</div>
+            <div style="min-width:0">
+              <div class="line-content" title="${escapeHtml(item.original)}">${highlight(item.original || "␠ Empty line")}</div>
+              ${elements.showSources.checked ? `<div class="file-meta" title="${escapeHtml(sourceText)}">${escapeHtml(sourceText)}</div>` : ""}
+            </div>
+            <div class="badges">
+              ${typeBadge}
+              ${elements.showOccurrences.checked ? `<span class="badge count">${item.totalOccurrences}×</span>` : ""}
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    function renderStats() {
+      const unique = state.results.filter(item => item.type === "unique").length;
+      const common = state.results.filter(item => item.type === "common").length;
+      const duplicates = state.results.filter(item => item.hasDuplicates || item.type === "duplicate").length;
+      const totalLines = state.files.reduce((sum, file) => sum + file.content.split(/\r?\n/).length, 0);
+
+      elements.statFiles.textContent = state.files.length;
+      elements.statLines.textContent = totalLines.toLocaleString();
+      elements.statUnique.textContent = unique.toLocaleString();
+      elements.statCommon.textContent = common.toLocaleString();
+      elements.statDuplicates.textContent = duplicates.toLocaleString();
+
+      elements.allTabCount.textContent = `(${state.results.length})`;
+      elements.uniqueTabCount.textContent = `(${unique})`;
+      elements.commonTabCount.textContent = `(${common})`;
+      elements.duplicateTabCount.textContent = `(${duplicates})`;
+    }
+
+    function exportResults() {
+      const rows = getFilteredResults();
+      if (!rows.length) return toast("There are no visible results to export.");
+
+      const type = elements.exportType.value;
+      const date = new Date().toISOString().slice(0, 10);
+      let content = "";
+      let mime = "text/plain;charset=utf-8";
+      let extension = "txt";
+
+      if (type === "txt") {
+        content = rows.map(item => item.original).join("\n");
+      }
+
+      if (type === "csv") {
+        extension = "csv";
+        mime = "text/csv;charset=utf-8";
+        const quote = value => `"${String(value).replaceAll('"', '""')}"`;
+        content = [
+          ["Text", "Type", "Occurrences", "Files"].map(quote).join(","),
+          ...rows.map(item => [
+            item.original,
+            item.type,
+            item.totalOccurrences,
+            [...item.sources.values()].map(source => source.fileName).join(" | ")
+          ].map(quote).join(","))
+        ].join("\n");
+      }
+
+      if (type === "json") {
+        extension = "json";
+        mime = "application/json;charset=utf-8";
+        content = JSON.stringify(rows.map(item => ({
+          text: item.original,
+          type: item.type,
+          occurrences: item.totalOccurrences,
+          sourceFiles: [...item.sources.values()].map(source => ({
+            name: source.fileName,
+            occurrences: source.count,
+            lineNumbers: source.lines
+          }))
+        })), null, 2);
+      }
+
+      download(content, `textdiff-${state.activeTab}-${date}.${extension}`, mime);
+      toast(`Exported ${rows.length} rows.`);
+    }
+
+    function download(content, name, mime) {
+      const url = URL.createObjectURL(new Blob([content], { type: mime }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function copyVisible() {
+      const rows = getFilteredResults();
+      if (!rows.length) return toast("No visible rows to copy.");
+      await navigator.clipboard.writeText(rows.map(item => item.original).join("\n"));
+      toast(`${rows.length} lines copied.`);
+    }
+
+    function clearSession() {
+      state.files = [];
+      state.results = [];
+      state.baselineId = null;
+      localStorage.removeItem("textdiff-pro-session");
+      renderFiles();
+      renderStats();
+      renderResults();
+      elements.statusText.textContent = "Add at least two files, then run the analysis.";
+      toast("Session cleared.");
+    }
+
+    function saveSession() {
+      const data = {
+        files: state.files,
+        baselineId: state.baselineId,
+        isLight: state.isLight
+      };
+      localStorage.setItem("textdiff-pro-session", JSON.stringify(data));
+    }
+
+    function restoreSession() {
+      try {
+        const stored = JSON.parse(localStorage.getItem("textdiff-pro-session"));
+        if (!stored) return;
+        state.files = stored.files || [];
+        state.baselineId = stored.baselineId || state.files[0]?.id || null;
+        state.isLight = Boolean(stored.isLight);
+        document.body.classList.toggle("light", state.isLight);
+        elements.themeBtn.textContent = state.isLight ? "🌙 Dark mode" : "☀️ Light mode";
+        renderFiles();
+        if (state.files.length >= 2) analyze();
+      } catch {
+        localStorage.removeItem("textdiff-pro-session");
+      }
+    }
+
+    elements.fileInput.addEventListener("change", async event => {
+      await addFiles(event.target.files);
+      event.target.value = "";
+    });
+
+    elements.selectFilesBtn.addEventListener("click", () => elements.fileInput.click());
+    elements.analyzeBtn.addEventListener("click", analyze);
+    elements.exportBtn.addEventListener("click", exportResults);
+    elements.copyBtn.addEventListener("click", copyVisible);
+    elements.clearBtn.addEventListener("click", clearSession);
+
+    elements.themeBtn.addEventListener("click", () => {
+      state.isLight = !state.isLight;
+      document.body.classList.toggle("light", state.isLight);
+      elements.themeBtn.textContent = state.isLight ? "🌙 Dark mode" : "☀️ Light mode";
+      saveSession();
+    });
+
+    elements.dropzone.addEventListener("dragover", event => {
+      event.preventDefault();
+      elements.dropzone.classList.add("dragging");
+    });
+
+    elements.dropzone.addEventListener("dragleave", () => {
+      elements.dropzone.classList.remove("dragging");
+    });
+
+    elements.dropzone.addEventListener("drop", async event => {
+      event.preventDefault();
+      elements.dropzone.classList.remove("dragging");
+      await addFiles(event.dataTransfer.files);
+    });
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(item => item.classList.remove("active"));
+        tab.classList.add("active");
+        state.activeTab = tab.dataset.tab;
+        renderResults();
+      });
+    });
+
+    [
+      elements.searchInput,
+      elements.sortSelect,
+      elements.minOccurrences,
+      elements.showSources,
+      elements.showOccurrences,
+      elements.dedupeVisible
+    ].forEach(control => control.addEventListener("input", renderResults));
+
+    [
+      elements.ignoreCase,
+      elements.trimSpace,
+      elements.ignoreEmpty,
+      elements.ignoreDiacritics,
+      elements.ignorePunctuation
+    ].forEach(control => control.addEventListener("change", () => {
+      if (state.files.length >= 2) analyze();
+    }));
+
+    document.addEventListener("keydown", event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        elements.searchInput.focus();
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "o") {
+        event.preventDefault();
+        elements.fileInput.click();
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        analyze();
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "e") {
+        event.preventDefault();
+        exportResults();
+      }
+    });
+
+    renderFiles();
+    renderStats();
+    restoreSession();
+  </script>
+</body>
+</html>
