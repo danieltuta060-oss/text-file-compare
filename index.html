@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compară fișiere TXT</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 32px 16px;
+      font-family: Arial, sans-serif;
+      color: #eaf0ff;
+      background: #101827;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    h1 { margin-top: 0; }
+    p { color: #b8c3d9; }
+
+    .upload-area {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    label, button {
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 16px;
+    }
+
+    label {
+      background: #1d2a40;
+      border: 1px solid #354662;
+      cursor: pointer;
+    }
+
+    input[type="file"] {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      color: #b8c3d9;
+    }
+
+    button {
+      border: 0;
+      background: #4f7cff;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+
+    button:hover { background: #3b67e5; }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      overflow: hidden;
+      border: 1px solid #354662;
+      border-radius: 12px;
+      background: #1d2a40;
+    }
+
+    .card h2 {
+      padding: 14px 16px;
+      margin: 0;
+      font-size: 17px;
+      background: #263754;
+    }
+
+    pre {
+      min-height: 160px;
+      max-height: 350px;
+      overflow: auto;
+      margin: 0;
+      padding: 16px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #dce7ff;
+    }
+
+    .download {
+      display: block;
+      padding: 12px 16px;
+      color: #9fc0ff;
+      text-decoration: none;
+      border-top: 1px solid #354662;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Compară două fișiere text</h1>
+    <p>Compararea se face pe linii. Liniile identice sunt eliminate din rezultatul „rămas".</p>
+
+    <div class="upload-area">
+      <label>
+        Primul fișier: <strong>1.txt</strong>
+        <input type="file" id="file1" accept=".txt,text/plain" />
+      </label>
+
+      <label>
+        Al doilea fișier: <strong>2.txt</strong>
+        <input type="file" id="file2" accept=".txt,text/plain" />
+      </label>
+    </div>
+
+    <button id="compareBtn">Compară fișierele</button>
+
+    <section class="results">
+      <div class="card">
+        <h2>Doar în 1.txt</h2>
+        <pre id="only1">—</pre>
+        <a id="download1" class="download" hidden>Descarcă rezultat</a>
+      </div>
+
+      <div class="card">
+        <h2>Doar în 2.txt</h2>
+        <pre id="only2">—</pre>
+        <a id="download2" class="download" hidden>Descarcă rezultat</a>
+      </div>
+
+      <div class="card">
+        <h2>Comune în ambele fișiere</h2>
+        <pre id="common">—</pre>
+      </div>
+
+      <div class="card">
+        <h2>Toate liniile rămase</h2>
+        <pre id="remaining">—</pre>
+        <a id="downloadRemaining" class="download" hidden>Descarcă rezultat complet</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const getLines = (text) =>
+      [...new Set(
+        text
+          .split(/\r?\n/)
+          .map(line => line.trim())
+          .filter(Boolean)
+      )];
+
+    function createDownload(linkId, content, filename) {
+      const link = document.getElementById(linkId);
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.hidden = content.length === 0;
+    }
+
+    document.getElementById("compareBtn").addEventListener("click", async () => {
+      const file1 = document.getElementById("file1").files[0];
+      const file2 = document.getElementById("file2").files[0];
+
+      if (!file1 || !file2) {
+        alert("Selectează ambele fișiere .txt.");
+        return;
+      }
+
+      const [text1, text2] = await Promise.all([
+        file1.text(),
+        file2.text()
+      ]);
+
+      const lines1 = getLines(text1);
+      const lines2 = getLines(text2);
+
+      const set1 = new Set(lines1);
+      const set2 = new Set(lines2);
+
+      const only1 = lines1.filter(line => !set2.has(line));
+      const only2 = lines2.filter(line => !set1.has(line));
+      const common = lines1.filter(line => set2.has(line));
+      const remaining = [...only1, ...only2];
+
+      document.getElementById("only1").textContent =
+        only1.join("\n") || "Nu există linii doar în primul fișier.";
+
+      document.getElementById("only2").textContent =
+        only2.join("\n") || "Nu există linii doar în al doilea fișier.";
+
+      document.getElementById("common").textContent =
+        common.join("\n") || "Nu există linii identice.";
+
+      document.getElementById("remaining").textContent =
+        remaining.join("\n") || "Nu au rămas linii după filtrare.";
+
+      createDownload("download1", only1.join("\n"), "doar-in-1.txt");
+      createDownload("download2", only2.join("\n"), "doar-in-2.txt");
+      createDownload("downloadRemaining", remaining.join("\n"), "rezultat-ramas.txt");
+    });
+  </script>
+</body>
+</html>
